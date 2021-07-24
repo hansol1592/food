@@ -22,19 +22,29 @@ const gsrun = async function (client) {
   const sheets = google.sheets({ version: "v4", auth: client });
   const request = {
     spreadsheetId: "1Ke-HsQIgaHIeCBvEYpm0U-UGcn8UBaM5q29hX78dcSM",
-    range: "배달음식!A1:F99",
+    range: "배달음식!F8:P99",
   };
   const response = (await sheets.spreadsheets.values.get(request)).data;
   const responseArray = response.values;
 
-  let categorized = { etc: [] };
+  let categorized = {};
   responseArray.forEach(function (value) {
-    const category = value[3];
-    const restaurant = value[4];
+    const info = {
+      ...(value[0] && { 구분: value[0] }),
+      ...(value[1] && { 배달유형: value[1] }),
+      ...(value[2] && { 배달시간: value[2] }),
+      ...(value[3] && { 업체명: value[3] }),
+      ...(value[5] && { 메뉴: value[5] }),
+      ...(value[6] && { 양: value[6] }),
+      ...(value[7] && { 맛: value[7] }),
+      ...(value[8] && { 서비스: value[8] }),
+      ...(value[9] && { 리뷰: value[9] }),
+      ...(value[10] && { 리뷰어: value[10] }),
+    };
 
-    if (category && restaurant) {
-      if (categorized[category]) categorized[category].push(restaurant);
-      else categorized[category] = [restaurant];
+    if (info.구분 && info.업체명) {
+      if (categorized[info.구분]) categorized[info.구분].push(info);
+      else categorized[info.구분] = [info];
     }
   });
 
@@ -47,7 +57,7 @@ exports.handler = async (event) => {
 
   const data = await gsrun(client);
 
-  const buildRespone = (res) => ({
+  const buildResponse = (res) => ({
     statusCode: 200,
     body: typeof res === "string" ? res : JSON.stringify(res),
   });
@@ -57,7 +67,7 @@ exports.handler = async (event) => {
       return buildResponse("Success GET");
     case "POST":
       if (path === "/gowid-slackbot-food-list") {
-        return buildRespone({
+        return buildResponse({
           attachments: [
             {
               title: "당신의 맛집 선택에 도움을 드립니다!",
@@ -83,21 +93,31 @@ exports.handler = async (event) => {
           const typeVal = body.actions[0].value;
           switch (typeVal) {
             case "한식":
-              return buildRespone("t1");
+              return buildResponse(
+                formattedMessage(getRandomItem(data, "한식"))
+              );
             case "분식":
-              return buildRespone("t2");
+              return buildResponse(
+                formattedMessage(getRandomItem(data, "분식"))
+              );
             case "양식":
-              return buildRespone("t3");
+              return buildResponse(
+                formattedMessage(getRandomItem(data, "양식"))
+              );
             case "중식":
-              return buildRespone("t4");
+              return buildResponse(
+                formattedMessage(getRandomItem(data, "중식"))
+              );
             case "t5":
-              return buildRespone("t5");
+              return buildResponse(formattedMessage(getRandomItem(data, "t5")));
             case "t6":
-              return buildRespone("t6");
+              return buildResponse(formattedMessage(getRandomItem(data, "t6")));
             case "아무거나":
-              return buildRespone("random");
+              return buildResponse(
+                formattedMessage(getRandomItem(data, "아무거나"))
+              );
             default:
-              return buildRespone(randomMessage());
+              return buildResponse(getRandomItem());
           }
         }
       }
@@ -109,12 +129,27 @@ exports.handler = async (event) => {
   };
 };
 
-function randomMessage() {
-  var items = [
-    "한솔아~ 이거 만들어볼래?",
-    "한솔아~ 내가 많이 만들어놨어~",
-    "한솔아~ 재밌겠지?",
-    "한솔아.. 한솔아.. 한솔아...!?",
-  ];
+function getRandomItem(data, category) {
+  var items = data[category];
   return items[Math.floor(Math.random() * items.length)];
+}
+
+function formattedMessage(item) {
+  return `
+  *배달유형* ${
+    item.배달유형 ? item.배달유형 : "아직 정보가 없어요. 부탁드려요!"
+  }\n*배달시간* ${
+    item.배달시간 ? item.배달시간 : "아직 정보가 없어요. 부탁드려요!"
+  }\n*업체명* ${
+    item.업체명 ? item.업체명 : "아직 정보가 없어요. 부탁드려요!"
+  }\n*메뉴* ${
+    item.메뉴 ? item.메뉴 : "아직 정보가 없어요. 부탁드려요!"
+  }\n*양* ${item.양 ? item.양 : "아직 정보가 없어요. 부탁드려요!"}\n*맛* ${
+    item.맛 ? item.맛 : "아직 정보가 없어요. 부탁드려요!"
+  }\n*서비스* ${
+    item.서비스 ? item.서비스 : "아직 정보가 없어요. 부탁드려요!"
+  }\n*리뷰* ${
+    item.리뷰 ? item.리뷰 : "아직 정보가 없어요. 부탁드려요!"
+  }\n*리뷰어* ${item.리뷰어 ? item.리뷰어 : "아직 정보가 없어요. 부탁드려요!"}
+`;
 }
