@@ -1,3 +1,4 @@
+// const { gsrun, client } = require("./gs.js");
 const { google } = require("googleapis");
 const keys = require("./token.json");
 
@@ -10,7 +11,7 @@ const client = new google.auth.JWT(
   ["https://www.googleapis.com/auth/spreadsheets"] // 사용자 시트 및 해당 속성에 대한 읽기/쓰기 액세스 허용
 );
 
-function gsrun(client) {
+const gsrun = async function (client) {
   client.authorize(function (err, tokens) {
     if (err) {
       console.log(err);
@@ -38,11 +39,13 @@ function gsrun(client) {
   });
 
   return categorized;
-}
+};
 
 exports.handler = async (event) => {
   console.log("event body", event.body);
   const path = event.path;
+
+  const data = await gsrun(client);
 
   const buildRespone = (res) => ({
     statusCode: 200,
@@ -60,18 +63,19 @@ exports.handler = async (event) => {
               title: "당신의 맛집 선택에 도움을 드립니다!",
               callback_id: "type",
               text: "원하는 종류의 음식을 선택하세요!",
-              actions: [
-                {
+              actions: Object.keys(data).map((item) => {
+                return {
                   name: "action",
                   type: "button",
-                  text: "한식",
-                  value: "한식",
-                },
-              ],
+                  text: item,
+                  value: item,
+                };
+              }),
             },
           ],
         });
       } else if (path === "/gowid-slackbot-food-list/interactive") {
+        let today = new Date();
         const body = JSON.parse(
           decodeURIComponent(event.body).replace("payload=", "")
         );
