@@ -1,4 +1,3 @@
-// const { gsrun, client } = require("./gs.js");
 const { google } = require("googleapis");
 const keys = require("./token.json");
 
@@ -56,6 +55,7 @@ exports.handler = async (event) => {
   const path = event.path;
 
   const data = await gsrun(client);
+  const limit = 5;
 
   const buildResponse = (res) => ({
     statusCode: 200,
@@ -73,51 +73,22 @@ exports.handler = async (event) => {
               title: "당신의 맛집 선택에 도움을 드립니다!",
               callback_id: "type",
               text: "원하는 종류의 음식을 선택하세요!",
-              actions: Object.keys(data).map((item) => {
-                return {
-                  name: "action",
-                  type: "button",
-                  text: item,
-                  value: item,
-                };
-              }),
             },
+            getAttachment("type", data, [limit * 0, limit * 1]),
+            getAttachment("type", data, [limit * 1, limit * 2]),
           ],
         });
       } else if (path === "/gowid-slackbot-food-list/interactive") {
-        let today = new Date();
         const body = JSON.parse(
           decodeURIComponent(event.body).replace("payload=", "")
         );
+
         if (body.callback_id === "type") {
           const typeVal = body.actions[0].value;
-          switch (typeVal) {
-            case "한식":
-              return buildResponse(
-                formattedMessage(getRandomItem(data, "한식"))
-              );
-            case "분식":
-              return buildResponse(
-                formattedMessage(getRandomItem(data, "분식"))
-              );
-            case "양식":
-              return buildResponse(
-                formattedMessage(getRandomItem(data, "양식"))
-              );
-            case "중식":
-              return buildResponse(
-                formattedMessage(getRandomItem(data, "중식"))
-              );
-            case "t5":
-              return buildResponse(formattedMessage(getRandomItem(data, "t5")));
-            case "t6":
-              return buildResponse(formattedMessage(getRandomItem(data, "t6")));
-            case "아무거나":
-              return buildResponse(
-                formattedMessage(getRandomItem(data, "아무거나"))
-              );
-            default:
-              return buildResponse(getRandomItem());
+          if (data[typeVal]) {
+            return buildResponse(
+              formattedMessage(getRandomItem(data, typeVal))
+            );
           }
         }
       }
@@ -134,22 +105,46 @@ function getRandomItem(data, category) {
   return items[Math.floor(Math.random() * items.length)];
 }
 
+function getAttachment(callback_id, data, range) {
+  return {
+    callback_id,
+    actions: Object.keys(data)
+      .map((item, index) => {
+        if (index >= range[0] && index < range[1]) {
+          return {
+            name: "action",
+            type: "button",
+            text: item,
+            value: item,
+          };
+        }
+      })
+      .filter((item) => item),
+  };
+}
+
 function formattedMessage(item) {
   return `
-  *배달유형* ${
+  *구분* *|* ${
+    item.구분 ? item.구분 : "아직 정보가 없어요. 부탁드려요!"
+  }\n*배달유형* *|* ${
     item.배달유형 ? item.배달유형 : "아직 정보가 없어요. 부탁드려요!"
-  }\n*배달시간* ${
+  }\n*배달시간* *|* ${
     item.배달시간 ? item.배달시간 : "아직 정보가 없어요. 부탁드려요!"
-  }\n*업체명* ${
+  }\n*업체명* *|* ${
     item.업체명 ? item.업체명 : "아직 정보가 없어요. 부탁드려요!"
-  }\n*메뉴* ${
+  }\n*메뉴* *|* ${
     item.메뉴 ? item.메뉴 : "아직 정보가 없어요. 부탁드려요!"
-  }\n*양* ${item.양 ? item.양 : "아직 정보가 없어요. 부탁드려요!"}\n*맛* ${
+  }\n*양* *|* ${
+    item.양 ? item.양 : "아직 정보가 없어요. 부탁드려요!"
+  }\n*맛* *|* ${
     item.맛 ? item.맛 : "아직 정보가 없어요. 부탁드려요!"
-  }\n*서비스* ${
+  }\n*서비스* *|* ${
     item.서비스 ? item.서비스 : "아직 정보가 없어요. 부탁드려요!"
-  }\n*리뷰* ${
+  }\n*리뷰* *|* ${
     item.리뷰 ? item.리뷰 : "아직 정보가 없어요. 부탁드려요!"
-  }\n*리뷰어* ${item.리뷰어 ? item.리뷰어 : "아직 정보가 없어요. 부탁드려요!"}
+  }\n*리뷰어* *|* ${
+    item.리뷰어 ? item.리뷰어 : "아직 정보가 없어요. 부탁드려요!"
+  }
 `;
 }
