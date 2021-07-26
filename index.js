@@ -85,9 +85,9 @@ exports.handler = async (event) => {
         if (body.callback_id === "type") {
           const typeVal = body.actions[0].value;
           if (data[typeVal]) {
-            return buildResponse(
-              formattedMessage(getRandomItem(data, typeVal))
-            );
+            return buildResponse({
+              attachments: formattedMessage(getRandomItem(data, typeVal)),
+            });
           }
         }
       }
@@ -124,7 +124,7 @@ function getAction(callback_id, data, range) {
           return {
             name: "action",
             type: "button",
-            text: item,
+            text: getText(item),
             value: item,
           };
         }
@@ -133,18 +133,51 @@ function getAction(callback_id, data, range) {
   };
 }
 
+const emojiDictionary = {
+  한식: "🥘",
+  디저트: "🍦",
+  중식: "🥡",
+  분식: "🍜",
+  동남아: "🍲",
+  샐러드: "🥗",
+  일식: "🍣",
+  양식: "🍝",
+  멕시칸: "🥙",
+  구분: "🍴",
+  배달유형: "🛵",
+  배달시간: "⏱",
+  업체명: "🏷",
+  메뉴: "📃",
+  양: "🧆",
+  맛: "🍭",
+  서비스: "👍",
+  리뷰: "🖋",
+  리뷰어: "👫",
+};
+
+function getText(item, isEmojiFirst) {
+  const emoji = emojiDictionary[item] ? emojiDictionary[item] : "🍽";
+  return isEmojiFirst ? `${emoji} ${item}` : `${item} ${emoji}`;
+}
+
 function formattedMessage(item) {
   const plz = "아직 정보가 없어요. 부탁드려요!";
-  return `
-  *구분* *|* ${item.구분 ? item.구분 : plz}
-  *배달유형* *|* ${item.배달유형 ? item.배달유형 : plz}
-  *배달시간* *|* ${item.배달시간 ? item.배달시간 : plz}
-  *업체명* *|* ${item.업체명 ? item.업체명 : plz}
-  *메뉴* *|* ${item.메뉴 ? item.메뉴 : plz}
-  *양* *|* ${item.양 ? item.양 : plz}
-  *맛* *|* ${item.맛 ? item.맛 : plz}
-  *서비스* *|* ${item.서비스 ? item.서비스 : plz}
-  *리뷰* *|* ${item.리뷰 ? item.리뷰 : plz}
-  *리뷰어* *|* ${item.리뷰어 ? item.리뷰어 : plz}
-`;
+  const keys = [
+    "구분",
+    "배달유형",
+    "배달시간",
+    "업체명",
+    "메뉴",
+    "양",
+    "맛",
+    "서비스",
+    "리뷰",
+    "리뷰어",
+  ];
+  return keys.map((key) => {
+    return {
+      title: key,
+      text: item[key] ? item[key] : plz,
+    };
+  });
 }
