@@ -1,5 +1,5 @@
 const { google } = require("googleapis");
-const keys = require("./token.json");
+const keys = require("../../token.json");
 
 process.env.TZ = "Asia/Seoul";
 
