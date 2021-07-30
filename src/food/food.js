@@ -1,6 +1,33 @@
 const { google } = require("googleapis");
 const keys = require("../token.json");
 
+const FOOD_SLAKC_URL_DICT = {
+  base: "/gowid-slackbot-food-list",
+  interactive: "/gowid-slackbot-food-list/interactive",
+};
+
+const EMOJI_DICT = {
+  한식: "🥘",
+  디저트: "🍦",
+  중식: "🥡",
+  분식: "🍜",
+  동남아: "🍲",
+  샐러드: "🥗",
+  일식: "🍣",
+  양식: "🍝",
+  멕시칸: "🥙",
+  구분: "🍴",
+  배달유형: "🛵",
+  배달시간: "⏱",
+  업체명: "🏷",
+  메뉴: "📃",
+  양: "🧆",
+  맛: "🍭",
+  서비스: "👍",
+  리뷰: "🖋",
+  리뷰어: "👫",
+};
+
 const client = new google.auth.JWT(
   keys.client_email,
   null,
@@ -82,36 +109,14 @@ function getAction(callback_id, data, range) {
   };
 }
 
-const emojiDictionary = {
-  한식: "🥘",
-  디저트: "🍦",
-  중식: "🥡",
-  분식: "🍜",
-  동남아: "🍲",
-  샐러드: "🥗",
-  일식: "🍣",
-  양식: "🍝",
-  멕시칸: "🥙",
-  구분: "🍴",
-  배달유형: "🛵",
-  배달시간: "⏱",
-  업체명: "🏷",
-  메뉴: "📃",
-  양: "🧆",
-  맛: "🍭",
-  서비스: "👍",
-  리뷰: "🖋",
-  리뷰어: "👫",
-};
-
 function getText(item, isEmojiFirst) {
-  const emoji = emojiDictionary[item] ? emojiDictionary[item] : "🍽";
+  const emoji = EMOJI_DICT[item] ? EMOJI_DICT[item] : "🍽";
   return isEmojiFirst ? `${emoji} ${item}` : `${item} ${emoji}`;
 }
 
 function formattedMessage(item) {
   const plz = "아직 정보가 없어요. 부탁드려요!";
-  const keys = [
+  const titles = [
     "구분",
     "업체명",
     "메뉴",
@@ -123,22 +128,43 @@ function formattedMessage(item) {
     "리뷰",
     "리뷰어",
   ];
-  return keys.map((key) => {
-    let text = item[key];
+  return titles.map((title) => {
+    let text = item[title];
 
-    if (key === "배달시간") {
+    if (title === "배달시간") {
       text = `약 ${text}`;
     }
 
-    if (key === "리뷰어") {
+    if (title === "리뷰어") {
       text = `${text} 님`;
     }
 
     return {
-      value: `• ${key} : ${item[key] ? text : plz}`,
+      value: `• ${title} : ${item[title] ? text : plz}`,
     };
   });
 }
+
+const limit = 5;
+const menuAttachments = {
+  attachments: [
+    {
+      title: "고슐랭이 배달 맛집을 알려드립니다🏅",
+      callback_id: "type",
+      text: "원하는 종류의 음식을 선택하세요!",
+    },
+    ...getActions({ data, limit, getAction }),
+  ],
+};
+
+const recommentAttachments = {
+  attachments: [
+    {
+      title: "고슐랭의 추천은요 ✍️",
+      fields: formattedMessage(getRandomItem(data, typeVal)),
+    },
+  ],
+};
 
 module.exports = {
   client,
@@ -147,4 +173,7 @@ module.exports = {
   getActions,
   getAction,
   formattedMessage,
+  menuAttachments,
+  recommentAttachments,
+  FOOD_SLAKC_URL_DICT,
 };
